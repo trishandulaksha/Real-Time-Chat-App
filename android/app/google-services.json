@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "985116051568",
+    "project_id": "tchat-32719",
+    "storage_bucket": "tchat-32719.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:985116051568:android:e09858960d5e8916af4cb5",
+        "android_client_info": {
+          "package_name": "com.tchat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD-UI_oSqImsHaSCyTQYErYCT3kZSbJpxY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
