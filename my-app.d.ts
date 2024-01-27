@@ -1,5 +1,6 @@
 /// <reference types="nativewind/types" />
 
+import {RouteProp} from '@react-navigation/native-stack';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 export type MyStackParamList = {
@@ -10,19 +11,19 @@ export type MyStackParamList = {
   homescreen: undefined;
   profilescreen: undefined;
   loginscreen: undefined;
-  chatscreen: undefined;
+  chatscreen: {params: {contactId: string; userName?: string}};
   resetpasswordscreen: undefined;
 };
 
 export type HomeScreenNavigationProp = NativeStackScreenProps<
   MyStackParamList,
+  chatscreen,
   main,
   Splash,
   profilescreen,
   otpvalidationscreen,
   resetpasswordscreen,
-  loginscreen,
-  chatscreen
+  loginscreen
 >;
 
 export type inputTypeProp = {
@@ -33,4 +34,10 @@ export type inputTypeProp = {
   onChangeText: (text: string) => void;
 
   setCanSubmit: (error: boolean) => void;
+};
+
+type chatScreenRouteProp = RouteProp<MyStackParamList, 'chatscreen'>;
+
+export type Props = {
+  route: chatScreenRouteProp;
 };

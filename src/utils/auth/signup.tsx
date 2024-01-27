@@ -37,14 +37,15 @@ export const signUpController = async (signUpData: SignUpData) => {
       uid: user.uid,
       userName,
       email,
+      status: 'offline',
     });
+    Alert.alert('User successfully created');
 
     setTimeout(() => {
       setCheckScreen(false);
       navigation.navigate('loginscreen');
       setShowSplash(false);
-    }, 3000);
-    Alert.alert('User successfully created');
+    }, 2000);
   } catch (error: any) {
     if (error.code === 'auth/email-already-in-use') {
       setDbResponse('That email address is already in use!');

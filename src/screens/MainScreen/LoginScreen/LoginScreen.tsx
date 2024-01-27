@@ -228,6 +228,7 @@ export const LoginScreenUnit: React.FC<{
         setShowSplash,
         navigation,
       };
+
       loginController(signinData);
     } else {
       Alert.alert('All fields are required');

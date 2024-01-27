@@ -1,6 +1,6 @@
 import {NavigationContainer} from '@react-navigation/native';
 
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import MainScreen from '../screens/MainScreen/MainScreen/MainScreen';
 
 import {createStackNavigator} from '@react-navigation/stack';
@@ -13,16 +13,37 @@ import {
   OTPValidationUnit,
 } from '../screens/MainScreen/LoginScreen/ResetPasswordScreen';
 import {MyStackParamList} from '../../my-app';
-// import SplashScreen from '../screens/SplashScreen/SplashScreen';
+import SplashScreen from '../screens/SplashScreen/SplashScreen';
+import auth from '@react-native-firebase/auth';
 
 const Stack = createStackNavigator<MyStackParamList>();
 const Routes = () => {
+  const [intializing, setInitializing] = useState(true);
+  const [newUser, setNewUser] = useState('');
+
+  useEffect(() => {
+    const unsubscribe = auth().onAuthStateChanged(user => {
+      console.log('subscriberd user : ', user);
+      setNewUser(user ? user.uid : '');
+      if (intializing) {
+        setTimeout(() => {
+          setInitializing(false);
+        }, 1000);
+      }
+    });
+
+    return unsubscribe;
+  }, [intializing]);
+
+  if (intializing) {
+    return <SplashScreen />;
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="main"
+        initialRouteName={newUser ? 'homescreen' : 'main'}
         screenOptions={{headerShown: false}}>
-        {/* <Stack.Screen name="Splash" component={SplashScreen} /> */}
         <Stack.Screen name="main" component={MainScreen} />
 
         <Stack.Screen name="loginscreen" component={LoginScreen} />

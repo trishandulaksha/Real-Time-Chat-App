@@ -1,18 +1,88 @@
-import {View, Text, TouchableOpacity, TextInput} from 'react-native';
-import React from 'react';
-import KeyboardAvoidingWrapper from '../../component/KeyboardAvoidingWrapper';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  FlatList,
+  KeyboardAvoidingView,
+} from 'react-native';
+import React, {useEffect, useState} from 'react';
+
 import Icon from 'react-native-vector-icons/EvilIcons';
 import FIcon from 'react-native-vector-icons/Feather';
 
-const ChatScreen = () => {
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {useNavigation} from '@react-navigation/native';
+import MessageService from '../../utils/messsageServices/messageService';
+import {HomeScreenNavigationProp, Props} from '../../../my-app';
+import socket from '../../utils/socketio/socketService';
+
+const ChatScreen: React.FC<Props> = ({route}) => {
+  const {contactId, userName} = route.params;
+  const navigation = useNavigation<HomeScreenNavigationProp>();
+  const [messageText, setMessageText] = useState<string>('');
+  const [messages, setMessage] = useState<any[]>();
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+
+  console.log('Chat screen rerender check ');
+  const handleSendMessage = async () => {
+    if (messageText.trim() !== '') {
+      await MessageService.sendMessage(
+        contactId,
+        messageText,
+        currentUser || '',
+      );
+      setMessageText(' ');
+    }
+  };
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const userID = await AsyncStorage.getItem('uid');
+        setCurrentUser(userID);
+      } catch (error) {
+        console.error('Error fetching user ID:', error);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
+  useEffect(() => {
+    const unsubscribe = MessageService.listenForMessage(
+      contactId,
+      conversation => {
+        setMessage(conversation);
+      },
+      currentUser || '',
+    );
+
+    socket.on('newMessage', ({contactId: sender, message: newMessage}) => {
+      if (contactId === currentUser) {
+        let notification = {
+          sender: sender,
+          message: newMessage,
+        };
+
+        AsyncStorage.setItem('notification', JSON.stringify(notification));
+      }
+    });
+    console.log('unsubscribe2', unsubscribe);
+    return () => {
+      unsubscribe();
+    };
+  }, [contactId, currentUser]);
+
   return (
     <>
-      <View className="h-full  ">
+      <View className="h-full ">
         {/* Header View  */}
 
-        <View className="flex flex-row items-center justify-between bg-white p-4">
+        <View className="flex flex-row items-center justify-between p-4 bg-white">
           <View className="flex flex-row items-center justify-center">
-            <TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                navigation.goBack();
+              }}>
               <Icon
                 name="chevron-left"
                 size={30}
@@ -24,7 +94,7 @@ const ChatScreen = () => {
                 }}
               />
             </TouchableOpacity>
-            <Text className="text-xl text-black">Trishan Dulaksha</Text>
+            <Text className="text-xl text-black">{userName}</Text>
           </View>
           <View className="flex flex-row items-center justify-center">
             <TouchableOpacity>
@@ -40,22 +110,42 @@ const ChatScreen = () => {
           </View>
         </View>
         {/* Message View  */}
-
-        <View className="h-full flex-1 ">
-          <KeyboardAvoidingWrapper>
-            <View className="bg-blue-400 p-2 self-start m-1 rounded-t-xl rounded-br-xl">
-              <Text>Hellow Broh</Text>
-              <Text>9.39</Text>
-            </View>
-            <View className="bg-blue-400 p-2 self-end m-1 rounded-t-xl rounded-bl-xl">
-              <Text>Hellow Broh</Text>
-              <Text>9.39</Text>
-            </View>
-          </KeyboardAvoidingWrapper>
+        <View className="flex-1 h-full ">
+          <KeyboardAvoidingView>
+            <FlatList
+              data={messages}
+              keyExtractor={item => item?.id?.toString()}
+              renderItem={({item}) =>
+                item.createdAt && (
+                  <View
+                    className={`flex ${
+                      item.sender === currentUser ? ' self-end' : ' self-start'
+                    } m-1  `}>
+                    <View
+                      className={`bg-blue-400 p-4 rounded-t-xl  ${
+                        item.sender === currentUser
+                          ? ' rounded-bl-xl ml-1'
+                          : ' rounded-br-xl mr-1'
+                      }`}>
+                      <Text>{item.text}</Text>
+                      <Text>
+                        {item.createdAt &&
+                          item.createdAt.toDate().toLocaleTimeString([], {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: false,
+                          })}
+                      </Text>
+                    </View>
+                  </View>
+                )
+              }
+            />
+          </KeyboardAvoidingView>
         </View>
 
         {/* KeyBoard View  */}
-        <View className="flex flex-row items-center mt-auto bg-white pt-2 pb-1">
+        <View className="flex flex-row items-center pt-2 pb-1 mt-auto bg-white">
           <View className="w-[8%] ">
             <TouchableOpacity>
               <FIcon
@@ -69,12 +159,14 @@ const ChatScreen = () => {
             <TouchableOpacity>
               <TextInput
                 placeholder="Type here"
-                className="border rounded-3xl px-6 mr-2"
+                className="px-6 mr-2 border rounded-3xl"
+                onChangeText={text => setMessageText(text)}
+                value={messageText}
               />
             </TouchableOpacity>
           </View>
           <View className="w-[8%]  ">
-            <TouchableOpacity>
+            <TouchableOpacity onPress={handleSendMessage}>
               <FIcon
                 name="send"
                 style={{color: 'blue', paddingRight: 6}}
