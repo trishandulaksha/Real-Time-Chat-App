@@ -7,14 +7,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {firebase} from '@react-native-firebase/auth';
 import {useNavigation} from '@react-navigation/native';
 import {HomeScreenNavigationProp} from '../../../my-app';
-import notificationModel from '../Notification/model/notificationModel';
+
 import NotificationIcon from '../Notification/notificationIcon/NotificationIcon';
+import NotificationModel from '../Notification/model/notificationModel';
 
 const ContactScreen = () => {
   const [contactsData, setContact] = useState<
     Array<{id: string; userName: string}>
   >([]);
   const [searchText, setSearchText] = useState('');
+
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
   console.log('Search Text', searchText);
@@ -41,7 +43,7 @@ const ContactScreen = () => {
   }, []);
 
   const handleNotification = () => {
-    notificationModel();
+    return <NotificationModel />;
   };
   const renderContactCard = (contact: {
     id: string;

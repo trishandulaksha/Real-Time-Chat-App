@@ -1,27 +1,16 @@
 import {Text} from 'react-native';
-import React, {useEffect, useState} from 'react';
+import React, {useContext} from 'react';
 import Icon from 'react-native-vector-icons/FontAwesome6';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import {NotificationData} from '../../../context/chatContext';
+
 const NotificationIcon = () => {
-  const [notificationLength, setNotificationLength] = useState(0);
-
-  useEffect(() => {
-    const fetchNotificationData = async () => {
-      try {
-        const data = await AsyncStorage.getItem('notification');
-        const parsedData = JSON.parse(data || '[]');
-        setNotificationLength(parsedData.length);
-      } catch (error) {
-        console.error('Error fetching notification data:', error);
-      }
-    };
-
-    fetchNotificationData();
-  }, []);
+  const {notifications} = useContext(NotificationData);
+  console.log('notifications data', notifications);
   return (
     <>
       <Text className="absolute -mt-2 -ml-4 font-bold text-red-600">
-        {notificationLength}
+        {notifications.length}
       </Text>
       <Icon name="bell" size={22} style={{color: 'black'}} />
     </>

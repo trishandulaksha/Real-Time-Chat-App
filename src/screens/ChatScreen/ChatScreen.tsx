@@ -6,16 +6,16 @@ import {
   FlatList,
   KeyboardAvoidingView,
 } from 'react-native';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 
 import Icon from 'react-native-vector-icons/EvilIcons';
 import FIcon from 'react-native-vector-icons/Feather';
+import FontIcon from 'react-native-vector-icons/FontAwesome5';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation} from '@react-navigation/native';
 import MessageService from '../../utils/messsageServices/messageService';
 import {HomeScreenNavigationProp, Props} from '../../../my-app';
-import socket from '../../utils/socketio/socketService';
 
 const ChatScreen: React.FC<Props> = ({route}) => {
   const {contactId, userName} = route.params;
@@ -23,8 +23,60 @@ const ChatScreen: React.FC<Props> = ({route}) => {
   const [messageText, setMessageText] = useState<string>('');
   const [messages, setMessage] = useState<any[]>();
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const flatListRef = useRef<FlatList | null>(null);
+  const [seenStatusChanged, setSeenStatusChanged] = useState<boolean>(true);
 
   console.log('Chat screen rerender check ');
+  // useEffect(() => {
+  //   const fetchCurrentUser = async () => {
+  //     try {
+  //       const userID = await AsyncStorage.getItem('uid');
+  //       setCurrentUser(userID);
+  //     } catch (error) {
+  //       console.error('Error fetching user ID:', error);
+  //     }
+  //   };
+
+  //   fetchCurrentUser();
+  // }, []);
+
+  useEffect(() => {
+    const fetchCurrentUserAndUnseenMessages = async () => {
+      try {
+        const userID = await AsyncStorage.getItem('uid');
+        setCurrentUser(userID);
+
+        // Fetch unseen messages
+        const unseenMessages = await MessageService.getUnseenMessages(
+          contactId,
+          userID || '',
+        );
+        console.log('Unseen Messages in useEffect:', unseenMessages);
+      } catch (error) {
+        console.error('Error fetching user ID or unseen messages:', error);
+      }
+    };
+
+    fetchCurrentUserAndUnseenMessages();
+  }, [contactId]);
+  useEffect(() => {
+    const unsubscribe = MessageService.listenForMessage(
+      contactId,
+      conversation => {
+        setMessage([...conversation]);
+      },
+      currentUser || '',
+      () => {
+        setSeenStatusChanged(false);
+      },
+    );
+
+    return () => {
+      unsubscribe();
+      setSeenStatusChanged(true);
+    };
+  }, [contactId, currentUser]);
+
   const handleSendMessage = async () => {
     if (messageText.trim() !== '') {
       await MessageService.sendMessage(
@@ -36,41 +88,11 @@ const ChatScreen: React.FC<Props> = ({route}) => {
     }
   };
   useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        const userID = await AsyncStorage.getItem('uid');
-        setCurrentUser(userID);
-      } catch (error) {
-        console.error('Error fetching user ID:', error);
-      }
-    };
-
-    fetchCurrentUser();
-  }, []);
-  useEffect(() => {
-    const unsubscribe = MessageService.listenForMessage(
-      contactId,
-      conversation => {
-        setMessage(conversation);
-      },
-      currentUser || '',
-    );
-
-    socket.on('newMessage', ({contactId: sender, message: newMessage}) => {
-      if (contactId === currentUser) {
-        let notification = {
-          sender: sender,
-          message: newMessage,
-        };
-
-        AsyncStorage.setItem('notification', JSON.stringify(notification));
-      }
-    });
-    console.log('unsubscribe2', unsubscribe);
-    return () => {
-      unsubscribe();
-    };
-  }, [contactId, currentUser]);
+    if (flatListRef.current) {
+      flatListRef.current.scrollToEnd({animated: true});
+      MessageService.markMessageAsSeen(contactId, currentUser || '');
+    }
+  }, [messages, contactId, currentUser]);
 
   return (
     <>
@@ -113,6 +135,7 @@ const ChatScreen: React.FC<Props> = ({route}) => {
         <View className="flex-1 h-full ">
           <KeyboardAvoidingView>
             <FlatList
+              ref={flatListRef}
               data={messages}
               keyExtractor={item => item?.id?.toString()}
               renderItem={({item}) =>
@@ -128,18 +151,35 @@ const ChatScreen: React.FC<Props> = ({route}) => {
                           : ' rounded-br-xl mr-1'
                       }`}>
                       <Text>{item.text}</Text>
-                      <Text>
-                        {item.createdAt &&
-                          item.createdAt.toDate().toLocaleTimeString([], {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: false,
-                          })}
-                      </Text>
+                      <View className="flex flex-row items-center justify-between">
+                        <Text>
+                          {item.createdAt &&
+                            item.createdAt.toDate().toLocaleTimeString([], {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: false,
+                            })}
+                        </Text>
+                        <View
+                          className={`ml-3  ${
+                            item.sender === currentUser ? 'block' : 'hidden'
+                          }`}>
+                          {!item.seen && !seenStatusChanged ? (
+                            <FontIcon name="check" style={{color: 'black'}} />
+                          ) : (
+                            <FontIcon name="check-double" color={'darkblue'} />
+                          )}
+                        </View>
+                      </View>
                     </View>
                   </View>
                 )
               }
+              onContentSizeChange={() => {
+                if (flatListRef.current) {
+                  flatListRef.current.scrollToEnd({animated: false});
+                }
+              }}
             />
           </KeyboardAvoidingView>
         </View>
@@ -160,8 +200,8 @@ const ChatScreen: React.FC<Props> = ({route}) => {
               <TextInput
                 placeholder="Type here"
                 className="px-6 mr-2 border rounded-3xl"
-                onChangeText={text => setMessageText(text)}
                 value={messageText}
+                onChangeText={text => setMessageText(text)}
               />
             </TouchableOpacity>
           </View>
