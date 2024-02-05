@@ -23,7 +23,6 @@ const Routes = () => {
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(user => {
-      console.log('subscriberd user : ', user);
       setNewUser(user ? user.uid : '');
       if (intializing) {
         setTimeout(() => {

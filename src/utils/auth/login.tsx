@@ -11,11 +11,6 @@ interface signinDataProps {
   navigation: any;
 }
 const goNext = async (userName: string, uid: string) => {
-  const existingUid = await AsyncStorage.getItem('uid');
-
-  if (existingUid) {
-    await AsyncStorage.removeItem('uid');
-  }
   await AsyncStorage.setItem('userName', userName);
   await AsyncStorage.setItem('uid', uid);
   await updateStatus(uid, 'online');
@@ -32,22 +27,30 @@ export const loginController = async (signinData: signinDataProps) => {
   try {
     await auth().signInWithEmailAndPassword(email, password);
     console.log('Login data passed');
-    // console.log(response.user);
+
     setShowSplash(true);
 
     const response = await firestore()
       .collection('users')
       .where('email', '==', email)
       .get();
-    if (response) {
-      goNext(response.docs[0].data().userName, response.docs[0].data().uid);
-    }
+    if (response.docs.length > 0) {
+      const userName = response.docs[0].data().userName;
+      const uid = response.docs[0].data().uid;
 
-    Alert.alert('User Sign in Success');
-    setTimeout(() => {
-      navigation.navigate('homescreen');
-      setShowSplash(false);
-    }, 1000);
+      await updateStatus(uid, 'online');
+
+      await goNext(userName, uid);
+
+      setShowSplash(true);
+      Alert.alert('User Sign in Success');
+      setTimeout(() => {
+        navigation.navigate('homescreen');
+        setShowSplash(false);
+      }, 1000);
+    } else {
+      setDbResponse('User not found');
+    }
   } catch (err: any) {
     console.log(err);
     if (err.code === 'auth/invalid-credential') {

@@ -6,7 +6,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
 } from 'react-native';
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useContext, useEffect, useRef, useState} from 'react';
 
 import Icon from 'react-native-vector-icons/EvilIcons';
 import FIcon from 'react-native-vector-icons/Feather';
@@ -16,67 +16,55 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation} from '@react-navigation/native';
 import MessageService from '../../utils/messsageServices/messageService';
 import {HomeScreenNavigationProp, Props} from '../../../my-app';
+import {NewMessage} from '../../context/chatContext';
 
 const ChatScreen: React.FC<Props> = ({route}) => {
   const {contactId, userName} = route.params;
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [messageText, setMessageText] = useState<string>('');
-  const [messages, setMessage] = useState<any[]>();
+  const [messages, setMessages] = useState<string[]>();
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const flatListRef = useRef<FlatList | null>(null);
   const [seenStatusChanged, setSeenStatusChanged] = useState<boolean>(true);
+  const {setNewMessage} = useContext(NewMessage);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   console.log('Chat screen rerender check ');
-  // useEffect(() => {
-  //   const fetchCurrentUser = async () => {
-  //     try {
-  //       const userID = await AsyncStorage.getItem('uid');
-  //       setCurrentUser(userID);
-  //     } catch (error) {
-  //       console.error('Error fetching user ID:', error);
-  //     }
-  //   };
 
-  //   fetchCurrentUser();
-  // }, []);
-
+  //Fectch the Current User
   useEffect(() => {
-    const fetchCurrentUserAndUnseenMessages = async () => {
+    const fetchCurrentUser = async () => {
       try {
         const userID = await AsyncStorage.getItem('uid');
         setCurrentUser(userID);
-
-        // Fetch unseen messages
-        const unseenMessages = await MessageService.getUnseenMessages(
-          contactId,
-          userID || '',
-        );
-        console.log('Unseen Messages in useEffect:', unseenMessages);
       } catch (error) {
-        console.error('Error fetching user ID or unseen messages:', error);
+        console.error('Error fetching user ID:', error);
       }
     };
 
-    fetchCurrentUserAndUnseenMessages();
-  }, [contactId]);
+    fetchCurrentUser();
+  }, []);
+
+  // listen for messages
   useEffect(() => {
     const unsubscribe = MessageService.listenForMessage(
       contactId,
       conversation => {
-        setMessage([...conversation]);
+        setMessages([...conversation]);
       },
       currentUser || '',
       () => {
         setSeenStatusChanged(false);
       },
+      currentPage,
     );
-
     return () => {
       unsubscribe();
       setSeenStatusChanged(true);
     };
-  }, [contactId, currentUser]);
+  }, [contactId, currentUser, currentPage]);
 
+  //handle sent messages
   const handleSendMessage = async () => {
     if (messageText.trim() !== '') {
       await MessageService.sendMessage(
@@ -85,15 +73,25 @@ const ChatScreen: React.FC<Props> = ({route}) => {
         currentUser || '',
       );
       setMessageText(' ');
+      setNewMessage(messages || []);
     }
   };
+
+  // Handle seen to unseeen message
   useEffect(() => {
     if (flatListRef.current) {
       flatListRef.current.scrollToEnd({animated: true});
-      MessageService.markMessageAsSeen(contactId, currentUser || '');
     }
   }, [messages, contactId, currentUser]);
 
+  const handleScroll = (event: any) => {
+    const offsetY = event?.nativeEvent?.contentOffset.y || 0;
+    const threshold = 10;
+
+    if (offsetY <= threshold) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
   return (
     <>
       <View className="h-full ">
@@ -175,9 +173,13 @@ const ChatScreen: React.FC<Props> = ({route}) => {
                   </View>
                 )
               }
+              onScroll={({nativeEvent}) => handleScroll({nativeEvent})}
               onContentSizeChange={() => {
                 if (flatListRef.current) {
-                  flatListRef.current.scrollToEnd({animated: false});
+                  MessageService.markMessageAsSeen(
+                    contactId,
+                    currentUser || '',
+                  );
                 }
               }}
             />

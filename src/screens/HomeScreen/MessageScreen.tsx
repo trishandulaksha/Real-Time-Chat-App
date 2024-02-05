@@ -4,7 +4,7 @@ import Icon from 'react-native-vector-icons/FontAwesome6';
 import {useNavigation} from '@react-navigation/native';
 
 import {HomeScreenNavigationProp} from '../../../my-app';
-import notificationModel from '../Notification/model/notificationModel';
+
 import NotificationIcon from '../Notification/notificationIcon/NotificationIcon';
 
 const MessageScreen = () => {
@@ -13,16 +13,13 @@ const MessageScreen = () => {
     navigation.navigate('chatscreen');
   };
 
-  const handleNotification = () => {
-    notificationModel();
-  };
   return (
     <>
       <View className="">
         <View className="flex flex-row items-center justify-between mx-6 mt-6 mb-4">
           <Text className="text-xl font-semibold text-black">Chats</Text>
           <View className="flex flex-row">
-            <TouchableOpacity onPress={handleNotification}>
+            <TouchableOpacity>
               <NotificationIcon />
             </TouchableOpacity>
           </View>

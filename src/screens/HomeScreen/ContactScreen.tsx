@@ -9,7 +9,6 @@ import {useNavigation} from '@react-navigation/native';
 import {HomeScreenNavigationProp} from '../../../my-app';
 
 import NotificationIcon from '../Notification/notificationIcon/NotificationIcon';
-import NotificationModel from '../Notification/model/notificationModel';
 
 const ContactScreen = () => {
   const [contactsData, setContact] = useState<
@@ -20,6 +19,7 @@ const ContactScreen = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
   console.log('Search Text', searchText);
+  // console.log('COntact Screen rerender chekc');
 
   const fetchContacts = async () => {
     const currentUserId = await AsyncStorage.getItem('uid');
@@ -42,9 +42,6 @@ const ContactScreen = () => {
     fetchContacts();
   }, []);
 
-  const handleNotification = () => {
-    return <NotificationModel />;
-  };
   const renderContactCard = (contact: {
     id: string;
     userName?: string;
@@ -94,7 +91,7 @@ const ContactScreen = () => {
         <View className="pb-2 ">
           <View className="flex flex-row items-center justify-between mx-6 mt-6 mb-4">
             <Text className="text-xl font-semibold text-black">Contacts</Text>
-            <TouchableOpacity onPress={handleNotification}>
+            <TouchableOpacity>
               <NotificationIcon />
             </TouchableOpacity>
           </View>

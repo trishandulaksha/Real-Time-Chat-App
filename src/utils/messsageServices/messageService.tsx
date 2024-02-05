@@ -33,6 +33,7 @@ const MessageService = {
     callback: (messages: any[]) => void,
     currentUser: string,
     onSeenChange: () => void,
+    page: number,
   ) => {
     const currentUserCollectionRef = firestore()
       .collection('messages')
@@ -41,7 +42,7 @@ const MessageService = {
       .doc(contactId)
       .collection('conversations')
       .orderBy('createdAt', 'desc')
-      .limit(10);
+      .limit(page * 10);
 
     const contactUserCollectionRef = firestore()
       .collection('messages')
@@ -50,7 +51,7 @@ const MessageService = {
       .doc(currentUser)
       .collection('conversations')
       .orderBy('createdAt', 'desc')
-      .limit(10);
+      .limit(page * 10);
 
     let currentUserMessages: any[] = [];
     let contactUserMessages: any[] = [];
@@ -96,25 +97,23 @@ const MessageService = {
 
     return unsubscribe;
   },
-  getUnseenMessages: async (contactId: string, currentUser: string) => {
+  getUnseenMessages: async (currentUser: string, contactId: string) => {
     try {
       const messageRef = firestore()
         .collection('messages')
-        .doc(contactId)
-        .collection('chat')
         .doc(currentUser)
+        .collection('chat')
+        .doc(contactId)
         .collection('conversations');
 
       const unseenMessages = await messageRef.where('seen', '==', false).get();
-
       const unseenMessagesData = unseenMessages.docs.map(doc => ({
+        ...doc.data(),
         id: doc.id,
         sender: doc.data().sender,
-        receiver: currentUser,
+        receiver: contactId,
         message: doc.data().text,
       }));
-
-      console.log('Unseen Messages:', unseenMessagesData);
 
       return unseenMessagesData;
     } catch (error) {
@@ -122,13 +121,13 @@ const MessageService = {
       throw error;
     }
   },
-  markMessageAsSeen: async (contactId: string, currentUser: string) => {
+  markMessageAsSeen: async (currentUser: string, contactId: string) => {
     try {
       const messageRef = firestore()
         .collection('messages')
-        .doc(contactId)
-        .collection('chat')
         .doc(currentUser)
+        .collection('chat')
+        .doc(contactId)
         .collection('conversations');
 
       const unSeenMessage = await messageRef.where('seen', '==', false).get();
